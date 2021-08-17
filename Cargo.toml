@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+	"rcalc-engine",
+	"rcalc-repl",
+]
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
