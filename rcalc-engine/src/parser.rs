@@ -6,6 +6,7 @@ use nom::{
 };
 use nom_locate::LocatedSpan;
 use std::str::FromStr;
+use thiserror::Error;
 
 pub type Span<'a> = LocatedSpan<&'a [u8]>;
 
@@ -36,6 +37,18 @@ impl<'a> From<Span<'a>> for Position {
     fn from(s: Span<'a>) -> Self {
         Position::from_span(s)
     }
+}
+
+#[derive(Error, Debug)]
+pub enum ParseError {
+    #[error("Parse error")]
+    ParseError,
+}
+
+pub fn parse_str(s: &str) -> Result<Node, ParseError> {
+    let result = parse(Span::new(s.as_bytes())).map_err(|_e| ParseError::ParseError);
+    let node = result.unwrap().1;
+    Ok(node)
 }
 
 pub fn parse(i: Span) -> IResult<Span, Node> {

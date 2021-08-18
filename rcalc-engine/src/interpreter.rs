@@ -4,7 +4,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum InterpreterError {
     #[error("Interpreter error")]
-    InvalidUnaryOperator { operator: Operator },
+    InvalidOperator { operator: Operator },
 }
 
 pub struct Interpreter {}
