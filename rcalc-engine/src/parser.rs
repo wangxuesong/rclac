@@ -1,5 +1,6 @@
 use crate::ast::{Node, Operator};
 
+use derive_more::Display;
 use nom::{
     branch::alt, character::complete::char, character::complete::digit1, combinator::map,
     sequence::tuple, IResult,
@@ -39,15 +40,16 @@ impl<'a> From<Span<'a>> for Position {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Display)]
 pub enum ParseError {
-    #[error("Parse error")]
-    ParseError,
+    // #[error("Parse error")]
+    ParseError(String),
 }
 
 pub fn parse_str(s: &str) -> Result<Node, ParseError> {
-    let result = parse(Span::new(s.as_bytes())).map_err(|_e| ParseError::ParseError);
-    let node = result.unwrap().1;
+    let result =
+        parse(Span::new(s.as_bytes())).map_err(|e| ParseError::ParseError(e.to_string()))?;
+    let node = result.1;
     Ok(node)
 }
 
