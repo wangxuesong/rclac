@@ -54,18 +54,23 @@ pub fn parse_str(s: &str) -> Result<Node, ParseError> {
 }
 
 pub fn parse(i: Span) -> IResult<Span, Node> {
-    map(
-        tuple((digit1, operator, digit1)),
-        |tup: (Span, Operator, Span)| {
-            let left = i64::from_str(std::str::from_utf8(tup.0.fragment()).unwrap()).unwrap();
-            let right = i64::from_str(std::str::from_utf8(tup.2.fragment()).unwrap()).unwrap();
-            Node::BinaryOperator {
-                operator: tup.1,
-                left: Box::new(Node::Number(left)),
-                right: Box::new(Node::Number(right)),
-            }
-        },
-    )(i)
+    alt((
+        map(
+            tuple((digit1, operator, digit1)),
+            |tup: (Span, Operator, Span)| {
+                let left = i64::from_str(std::str::from_utf8(tup.0.fragment()).unwrap()).unwrap();
+                let right = i64::from_str(std::str::from_utf8(tup.2.fragment()).unwrap()).unwrap();
+                Node::BinaryOperator {
+                    operator: tup.1,
+                    left: Box::new(Node::Number(left)),
+                    right: Box::new(Node::Number(right)),
+                }
+            },
+        ),
+        map(digit1, |s: Span| {
+            Node::Number(i64::from_str(std::str::from_utf8(s.fragment()).unwrap()).unwrap())
+        }),
+    ))(i)
 }
 
 fn operator(i: Span) -> IResult<Span, Operator> {
@@ -82,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_add_sub_expression() {
-        let expr_str = ["1+2", "2-1"];
+        let expr_str = ["1+2", "2-1", "3"];
 
         let expected_node = [
             Node::BinaryOperator {
@@ -95,6 +100,7 @@ mod tests {
                 left: Box::new(Node::Number(2)),
                 right: Box::new(Node::Number(1)),
             },
+            Node::Number(3),
         ];
 
         for (i, e) in expr_str.iter().enumerate() {
