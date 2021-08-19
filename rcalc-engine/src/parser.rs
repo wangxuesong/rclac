@@ -3,7 +3,7 @@ use crate::ast::{Node, Operator};
 use derive_more::Display;
 use nom::{
     branch::alt, character::complete::char, character::complete::digit1, combinator::map,
-    sequence::tuple, IResult,
+    multi::many0, sequence::tuple, IResult,
 };
 use nom_locate::LocatedSpan;
 use std::str::FromStr;
@@ -56,27 +56,47 @@ pub fn parse_str(s: &str) -> Result<Node, ParseError> {
 pub fn parse(i: Span) -> IResult<Span, Node> {
     alt((
         map(
-            tuple((digit1, operator, digit1)),
-            |tup: (Span, Operator, Span)| {
-                let left = i64::from_str(std::str::from_utf8(tup.0.fragment()).unwrap()).unwrap();
-                let right = i64::from_str(std::str::from_utf8(tup.2.fragment()).unwrap()).unwrap();
-                Node::BinaryOperator {
-                    operator: tup.1,
-                    left: Box::new(Node::Number(left)),
-                    right: Box::new(Node::Number(right)),
-                }
+            tuple((term, add_sub_operator, term)),
+            |(left, op, right)| Node::BinaryOperator {
+                operator: op,
+                left: Box::new(left),
+                right: Box::new(right),
             },
         ),
-        map(digit1, |s: Span| {
-            Node::Number(i64::from_str(std::str::from_utf8(s.fragment()).unwrap()).unwrap())
-        }),
+        term,
     ))(i)
 }
 
-fn operator(i: Span) -> IResult<Span, Operator> {
+fn term(i: Span) -> IResult<Span, Node> {
+    map(
+        tuple((number, many0(tuple((mul_div_operator, number))))),
+        |(n, v)| {
+            v.into_iter().fold(n, |l, (o, r)| Node::BinaryOperator {
+                operator: o,
+                left: Box::new(l),
+                right: Box::new(r),
+            })
+        },
+    )(i)
+}
+
+fn number(i: Span) -> IResult<Span, Node> {
+    map(digit1, |d: Span| {
+        Node::Number(i64::from_str(std::str::from_utf8(d.fragment()).unwrap()).unwrap())
+    })(i)
+}
+
+fn add_sub_operator(i: Span) -> IResult<Span, Operator> {
     alt((
         map(char('+'), |_| Operator::Plus),
         map(char('-'), |_| Operator::Minus),
+    ))(i)
+}
+
+fn mul_div_operator(i: Span) -> IResult<Span, Operator> {
+    alt((
+        map(char('*'), |_| Operator::Multiply),
+        map(char('/'), |_| Operator::Divide),
     ))(i)
 }
 
@@ -87,7 +107,7 @@ mod tests {
 
     #[test]
     fn test_add_sub_expression() {
-        let expr_str = ["1+2", "2-1", "3"];
+        let expr_str = ["1+2", "2-1", "3", "2*1", "3/1", "1+2*3"];
 
         let expected_node = [
             Node::BinaryOperator {
@@ -101,6 +121,25 @@ mod tests {
                 right: Box::new(Node::Number(1)),
             },
             Node::Number(3),
+            Node::BinaryOperator {
+                operator: Operator::Multiply,
+                left: Box::new(Node::Number(2)),
+                right: Box::new(Node::Number(1)),
+            },
+            Node::BinaryOperator {
+                operator: Operator::Divide,
+                left: Box::new(Node::Number(3)),
+                right: Box::new(Node::Number(1)),
+            },
+            Node::BinaryOperator {
+                operator: Operator::Plus,
+                left: Box::new(Node::Number(1)),
+                right: Box::new(Node::BinaryOperator {
+                    operator: Operator::Multiply,
+                    left: Box::new(Node::Number(2)),
+                    right: Box::new(Node::Number(3)),
+                }),
+            },
         ];
 
         for (i, e) in expr_str.iter().enumerate() {
