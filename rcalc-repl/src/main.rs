@@ -1,9 +1,9 @@
 use derive_more::Display;
 use rcalc_engine::parser::ParseError;
-use rcalc_engine::AstBuilder;
 use rcalc_engine::Executor;
 use rcalc_engine::ExecutorError;
 use rcalc_engine::Interpreter;
+use rcalc_engine::{AstBuilder, VMExecutor};
 use rustyline::{error::ReadlineError, Editor};
 use thiserror::Error;
 
@@ -25,7 +25,8 @@ fn main() -> Result<(), ReplError> {
                 let node = AstBuilder::build_ast(l.as_str());
                 match node {
                     Ok(n) => {
-                        let result = Interpreter {}.execute_ast(&n);
+                        let executor = VMExecutor {};
+                        let result = executor.execute_ast(&n);
                         match result {
                             Ok(i) => println!("{}", i),
                             Err(e) => println!("{}", e),
