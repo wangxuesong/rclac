@@ -3,6 +3,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum InterpreterError {
+    #[error("attempt to divide by zero")]
+    DivideByZero,
     #[error("Interpreter error")]
     InvalidOperator { operator: Operator },
 }
@@ -20,12 +22,17 @@ impl Interpreter {
             } => {
                 let left = Interpreter::execute_ast(left)?;
                 let right = Interpreter::execute_ast(right)?;
-                Ok(match operator {
-                    Operator::Plus => left + right,
-                    Operator::Minus => left - right,
-                    Operator::Multiply => left * right,
-                    Operator::Divide => left / right,
-                })
+                match operator {
+                    Operator::Plus => Ok(left + right),
+                    Operator::Minus => Ok(left - right),
+                    Operator::Multiply => Ok(left * right),
+                    Operator::Divide => {
+                        if right == 0 {
+                            return Err(InterpreterError::DivideByZero);
+                        }
+                        Ok(left / right)
+                    }
+                }
             }
         }
     }

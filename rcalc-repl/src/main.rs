@@ -24,8 +24,11 @@ fn main() -> Result<(), ReplError> {
                 let node = AstBuilder::build_ast(l.as_str());
                 match node {
                     Ok(n) => {
-                        let result = Interpreter::execute_ast(&n)?;
-                        println!("{}", result);
+                        let result = Interpreter::execute_ast(&n);
+                        match result {
+                            Ok(i) => println!("{}", i),
+                            Err(e) => println!("{}", e),
+                        }
                     }
                     Err(e) => println!("{}", ReplError::ParseError(e)),
                 }
