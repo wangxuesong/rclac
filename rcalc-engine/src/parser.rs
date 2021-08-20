@@ -1,7 +1,11 @@
 use crate::ast::{Node, Operator};
 
-use nom::IResult;
+use nom::{
+    branch::alt, character::complete::char, character::complete::digit1, combinator::map,
+    sequence::tuple, IResult,
+};
 use nom_locate::LocatedSpan;
+use std::str::FromStr;
 
 pub type Span<'a> = LocatedSpan<&'a [u8]>;
 
@@ -35,15 +39,25 @@ impl<'a> From<Span<'a>> for Position {
 }
 
 pub fn parse(i: Span) -> IResult<Span, Node> {
-    // Err(Err::Incomplete(Needed::new(4)))
-    Ok((
-        Span::new("".as_bytes()),
-        Node::BinaryOperator {
-            operator: Operator::Plus,
-            left: Box::new(Node::Number(1)),
-            right: Box::new(Node::Number(2)),
+    map(
+        tuple((digit1, operator, digit1)),
+        |tup: (Span, Operator, Span)| {
+            let left = i64::from_str(std::str::from_utf8(tup.0.fragment()).unwrap()).unwrap();
+            let right = i64::from_str(std::str::from_utf8(tup.2.fragment()).unwrap()).unwrap();
+            Node::BinaryOperator {
+                operator: tup.1,
+                left: Box::new(Node::Number(left)),
+                right: Box::new(Node::Number(right)),
+            }
         },
-    ))
+    )(i)
+}
+
+fn operator(i: Span) -> IResult<Span, Operator> {
+    alt((
+        map(char('+'), |_| Operator::Plus),
+        map(char('-'), |_| Operator::Minus),
+    ))(i)
 }
 
 #[cfg(test)]
@@ -53,13 +67,20 @@ mod tests {
 
     #[test]
     fn test_add_sub_expression() {
-        let expr_str = ["1+2"];
+        let expr_str = ["1+2", "2-1"];
 
-        let expected_node = [Node::BinaryOperator {
-            operator: Operator::Plus,
-            left: Box::new(Node::Number(1)),
-            right: Box::new(Node::Number(2)),
-        }];
+        let expected_node = [
+            Node::BinaryOperator {
+                operator: Operator::Plus,
+                left: Box::new(Node::Number(1)),
+                right: Box::new(Node::Number(2)),
+            },
+            Node::BinaryOperator {
+                operator: Operator::Minus,
+                left: Box::new(Node::Number(2)),
+                right: Box::new(Node::Number(1)),
+            },
+        ];
 
         for (i, e) in expr_str.iter().enumerate() {
             let res = parse(Span::new(e.as_bytes()));
