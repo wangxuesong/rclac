@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::{Executor, ExecutorError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -11,8 +12,8 @@ pub enum InterpreterError {
 
 pub struct Interpreter {}
 
-impl Interpreter {
-    pub fn execute_ast(root: &Node) -> Result<i64, InterpreterError> {
+impl Executor for Interpreter {
+    fn execute_ast(&self, root: &Node) -> Result<i64, ExecutorError> {
         match root {
             Node::Number(n) => Ok(*n),
             Node::BinaryOperator {
@@ -20,15 +21,17 @@ impl Interpreter {
                 left,
                 right,
             } => {
-                let left = Interpreter::execute_ast(left)?;
-                let right = Interpreter::execute_ast(right)?;
+                let left = Interpreter::execute_ast(self, left)?;
+                let right = Interpreter::execute_ast(self, right)?;
                 match operator {
                     Operator::Plus => Ok(left + right),
                     Operator::Minus => Ok(left - right),
                     Operator::Multiply => Ok(left * right),
                     Operator::Divide => {
                         if right == 0 {
-                            return Err(InterpreterError::DivideByZero);
+                            return Err(ExecutorError::InterpreterError(
+                                InterpreterError::DivideByZero,
+                            ));
                         }
                         Ok(left / right)
                     }
@@ -69,7 +72,7 @@ mod tests {
         let expected = [3i64, 1, 6, 4];
 
         for (i, e) in expr_node.iter().enumerate() {
-            let res = Interpreter::execute_ast(e);
+            let res = Interpreter {}.execute_ast(e);
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), expected[i]);
         }

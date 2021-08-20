@@ -1,15 +1,16 @@
 use derive_more::Display;
-use rcalc_engine::ast::AstBuilder;
-use rcalc_engine::interpreter::{Interpreter, InterpreterError};
 use rcalc_engine::parser::ParseError;
-use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use rcalc_engine::AstBuilder;
+use rcalc_engine::Executor;
+use rcalc_engine::ExecutorError;
+use rcalc_engine::Interpreter;
+use rustyline::{error::ReadlineError, Editor};
 use thiserror::Error;
 
 #[derive(Error, Debug, Display)]
 enum ReplError {
     ParseError(#[from] ParseError),
-    InterpreterError(#[from] InterpreterError),
+    ExecutorError(#[from] ExecutorError),
     ReadlineError(#[from] ReadlineError),
 }
 
@@ -24,7 +25,7 @@ fn main() -> Result<(), ReplError> {
                 let node = AstBuilder::build_ast(l.as_str());
                 match node {
                     Ok(n) => {
-                        let result = Interpreter::execute_ast(&n);
+                        let result = Interpreter {}.execute_ast(&n);
                         match result {
                             Ok(i) => println!("{}", i),
                             Err(e) => println!("{}", e),
