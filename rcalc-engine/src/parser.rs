@@ -50,6 +50,14 @@ pub enum ParseError {
 pub fn parse_str(s: &str) -> Result<Node, ParseError> {
     let result =
         parse(Span::new(s.as_bytes())).map_err(|e| ParseError::ParseError(e.to_string()))?;
+    if result.0.len() > 0 {
+        return Err(ParseError::ParseError(format!(
+            "syntax error in row {}, column {}: {}",
+            result.0.location_line(),
+            result.0.get_utf8_column(),
+            std::str::from_utf8(result.0.fragment()).unwrap()
+        )));
+    }
     let node = result.1;
     Ok(node)
 }
