@@ -2,8 +2,9 @@ use crate::ast::{Node, Operator};
 
 use derive_more::Display;
 use nom::{
-    branch::alt, character::complete::char, character::complete::digit1, combinator::map,
-    multi::many0, sequence::tuple, IResult,
+    branch::alt, character::complete::char, character::complete::digit1,
+    character::complete::multispace0, combinator::map, multi::many0, sequence::preceded,
+    sequence::tuple, IResult,
 };
 use nom_locate::LocatedSpan;
 use std::str::FromStr;
@@ -81,23 +82,32 @@ fn term(i: Span) -> IResult<Span, Node> {
 }
 
 fn number(i: Span) -> IResult<Span, Node> {
-    map(digit1, |d: Span| {
-        Node::Number(i64::from_str(std::str::from_utf8(d.fragment()).unwrap()).unwrap())
-    })(i)
+    preceded(
+        multispace0,
+        map(digit1, |d: Span| {
+            Node::Number(i64::from_str(std::str::from_utf8(d.fragment()).unwrap()).unwrap())
+        }),
+    )(i)
 }
 
 fn add_sub_operator(i: Span) -> IResult<Span, Operator> {
-    alt((
-        map(char('+'), |_| Operator::Plus),
-        map(char('-'), |_| Operator::Minus),
-    ))(i)
+    preceded(
+        multispace0,
+        alt((
+            map(char('+'), |_| Operator::Plus),
+            map(char('-'), |_| Operator::Minus),
+        )),
+    )(i)
 }
 
 fn mul_div_operator(i: Span) -> IResult<Span, Operator> {
-    alt((
-        map(char('*'), |_| Operator::Multiply),
-        map(char('/'), |_| Operator::Divide),
-    ))(i)
+    preceded(
+        multispace0,
+        alt((
+            map(char('*'), |_| Operator::Multiply),
+            map(char('/'), |_| Operator::Divide),
+        )),
+    )(i)
 }
 
 #[cfg(test)]
@@ -107,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_add_sub_expression() {
-        let expr_str = ["1+2", "2-1", "3", "2*1", "3/1", "1+2*3"];
+        let expr_str = [" 1 + 2", "2-1", "3", "2*1", "3/1", " 1 + 2 * \t\n3"];
 
         let expected_node = [
             Node::BinaryOperator {
@@ -145,6 +155,7 @@ mod tests {
         for (i, e) in expr_str.iter().enumerate() {
             let res = parse(Span::new(e.as_bytes()));
             assert!(res.is_ok());
+            assert_eq!(res.as_ref().unwrap().0.len(), 0);
             assert_eq!(res.unwrap().1, expected_node[i]);
         }
     }
